@@ -1,3 +1,5 @@
+#include "kernel/types.h"
+#include "kernel/stat.h"
 #include "user/user.h"
 
 void spin() {
@@ -41,11 +43,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-
     struct pstat pinfo;
     printf("step,pid,tickets,ticks\n");
     for(int t = 0; t<100; t++){
-        sleep(100);
+        sleep(15);
 
         if (getpinfo(&pinfo) < 0) {
             printf("Error: getpinfo failed\n");
@@ -69,4 +70,6 @@ int main(int argc, char *argv[]) {
     wait(0);
 
     exit(0);
+
+    return 0;
 }

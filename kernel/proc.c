@@ -443,61 +443,6 @@ wait(uint64 addr)
   }
 }
 
-// Per-CPU process scheduler.
-// Each CPU calls scheduler() after setting itself up.
-// Scheduler never returns.  It loops, doing:
-//  - choose a process to run.
-//  - swtch to start running that process.
-//  - eventually that process transfers control
-//    via swtch back to the scheduler.
-/*void
-scheduler(void)
-{
-  struct proc *p;
-  struct cpu *c = mycpu();
-  
-  c->proc = 0;
-  for(;;){
-    // Avoid deadlock by ensuring that devices can interrupt.
-    intr_on();
-
-    // Gather total tickets number to generate de golden ticket.
-    int total_tickets = 0;
-    for (p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state != SLEEPING)
-        total_tickets += p->tickets;
-      release(&p->lock);
-    }
-
-    int golden_ticket = 100 % total_tickets;
-    int ticket_buffer = 0;
-
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        ticket_buffer += p->tickets;
-
-        if(ticket_buffer > golden_ticket){
-          // Switch to chosen process.  It is the process's job
-          // to release its lock and then reacquire it
-          // before jumping back to us.
-          p->ticks += 1;
-          p->state = RUNNING;
-          c->proc = p;
-          swtch(&c->context, &p->context);
-
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          c->proc = 0;
-          release(&p->lock);
-          break;
-        }
-      }
-      release(&p->lock);
-    }
-  }
-}*/
 // Define a seed for the random number generator
 static uint64 rand_seed = 1;
 static struct spinlock rand_lock;
@@ -546,6 +491,7 @@ scheduler(void)
       if(p->state == RUNNABLE) {
         ticket_buffer += p->tickets;
         if(ticket_buffer > golden_ticket){
+          p->ticks += 1;
           p->state = RUNNING;
           c->proc = p;
           swtch(&c->context, &p->context);
