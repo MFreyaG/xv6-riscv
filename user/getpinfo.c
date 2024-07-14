@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     getpinfo(&pstat);
 
     for(int i = 0; i < NPROC; i++){
-        printf("Process %d:\n inuse(%d) tickets(%d) ticks(%d) pid(%d)\n", i, pstat.inuse, pstat.tickets, pstat.ticks, pstat.pid);
+        printf("Process %d:\n inuse(%d) tickets(%d) ticks(%d) pid(%d)\n", i, pstat.inuse[i], pstat.tickets[i], pstat.ticks[i], pstat.pid[i]);
     }
 
     exit(0);

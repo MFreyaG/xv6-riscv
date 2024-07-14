@@ -126,6 +126,9 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // TP2
+  p->tickets = 1;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -495,6 +498,26 @@ scheduler(void)
     }
   }
 }*/
+// Define a seed for the random number generator
+static uint64 rand_seed = 1;
+static struct spinlock rand_lock;
+
+// Function to set the seed
+void ticket_srand(uint64 seed) {
+  acquire(&rand_lock);
+  rand_seed = seed;
+  release(&rand_lock);
+}
+
+// Function to generate a random number
+uint64 ticket_rand(int range) {
+  acquire(&rand_lock);
+  rand_seed = rand_seed * 1664525 + 1013904223;
+  uint64 result = (rand_seed >> 24) % range;
+  release(&rand_lock);
+  return result;
+}
+
 void
 scheduler(void)
 {
@@ -506,19 +529,30 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
+    // Gather total tickets number to generate de golden ticket.
+    int total_tickets = 0;
+    for (p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state != SLEEPING)
+        total_tickets += p->tickets;
+      release(&p->lock);
+    }
+
+    int golden_ticket = ticket_rand(total_tickets);
+    int ticket_buffer = 0;
+
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+        ticket_buffer += p->tickets;
+        if(ticket_buffer > golden_ticket){
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+          c->proc = 0;
+          release(&p->lock);
+          break;
+        }
       }
       release(&p->lock);
     }
@@ -736,26 +770,29 @@ procdump(void)
   }
 }
 
-void getpinfo(struct pstat *pstat){
+void getpinfo(struct pstat *_pstat){
   struct proc *p;
+  struct pstat pstat;
   int i = 0;
 
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
     
     if(p->state == UNUSED){
-      pstat->inuse[i] = 0;
-      pstat->tickets[i] = 0;
-      pstat->pid[i] = 0;
-      pstat->ticks[i] = 0;
+      pstat.inuse[i] = 0;
+      pstat.tickets[i] = 0;
+      pstat.pid[i] = 0;
+      pstat.ticks[i] = 0;
     } else{
-      pstat->inuse[i] = 1;
-      pstat->tickets[i] = p->tickets;
-      pstat->pid[i] = p->pid;
-      pstat->ticks[i] = p->ticks;
+      pstat.inuse[i] = 1;
+      pstat.tickets[i] = p->tickets;
+      pstat.pid[i] = p->pid;
+      pstat.ticks[i] = p->ticks;
     }
     release(&p->lock);
 
     i++;
   }
+
+  copyout(myproc()->pagetable, (uint64)_pstat, (char*)&pstat, sizeof(pstat));
 }
