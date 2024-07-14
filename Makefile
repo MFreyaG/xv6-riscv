@@ -116,6 +116,8 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 .PRECIOUS: %.o
 
 UPROGS=\
+	$U/_settickets\
+	$U/_getpinfo\
 	$U/_cat\
 	$U/_echo\
 	$U/_forktest\

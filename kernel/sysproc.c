@@ -7,6 +7,22 @@
 #include "proc.h"
 
 uint64
+sys_settickets(void){
+  int tickets;
+  argint(0, &tickets);
+
+  struct proc *proc = myproc();
+  proc->tickets = tickets;
+  printf("proc tickets: %d\n", proc->tickets);
+  return 0;
+}
+
+uint64
+sys_getpinfo(void){
+  return 0;
+}
+
+uint64
 sys_exit(void)
 {
   int n;

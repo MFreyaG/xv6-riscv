@@ -1,3 +1,5 @@
+#include "kernel/pstat.h"
+
 struct stat;
 
 // system calls
@@ -39,3 +41,6 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
+
+int settickets(int);
+int getpinfo(struct pstat *);
