@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
@@ -322,6 +323,11 @@ fork(void)
   np->state = RUNNABLE;
   release(&np->lock);
 
+  // TP2
+  acquire(&np->lock);
+  np->tickets = p->tickets;
+  release(&np->lock);
+
   return pid;
 }
 
@@ -441,6 +447,54 @@ wait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
+/*void
+scheduler(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+  
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+
+    // Gather total tickets number to generate de golden ticket.
+    int total_tickets = 0;
+    for (p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state != SLEEPING)
+        total_tickets += p->tickets;
+      release(&p->lock);
+    }
+
+    int golden_ticket = 100 % total_tickets;
+    int ticket_buffer = 0;
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        ticket_buffer += p->tickets;
+
+        if(ticket_buffer > golden_ticket){
+          // Switch to chosen process.  It is the process's job
+          // to release its lock and then reacquire it
+          // before jumping back to us.
+          p->ticks += 1;
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+          release(&p->lock);
+          break;
+        }
+      }
+      release(&p->lock);
+    }
+  }
+}*/
 void
 scheduler(void)
 {
@@ -679,5 +733,29 @@ procdump(void)
       state = "???";
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
+  }
+}
+
+void getpinfo(struct pstat *pstat){
+  struct proc *p;
+  int i = 0;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    
+    if(p->state == UNUSED){
+      pstat->inuse[i] = 0;
+      pstat->tickets[i] = 0;
+      pstat->pid[i] = 0;
+      pstat->ticks[i] = 0;
+    } else{
+      pstat->inuse[i] = 1;
+      pstat->tickets[i] = p->tickets;
+      pstat->pid[i] = p->pid;
+      pstat->ticks[i] = p->ticks;
+    }
+    release(&p->lock);
+
+    i++;
   }
 }

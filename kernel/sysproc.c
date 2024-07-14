@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "pstat.h"
 
 uint64
 sys_settickets(void){
@@ -13,12 +14,17 @@ sys_settickets(void){
 
   struct proc *proc = myproc();
   proc->tickets = tickets;
-  printf("proc tickets: %d\n", proc->tickets);
+  
   return 0;
 }
 
 uint64
 sys_getpinfo(void){
+  struct pstat *pstat;
+  argaddr(0, (uint64*)&pstat);
+
+  getpinfo(pstat);
+  
   return 0;
 }
 
