@@ -443,24 +443,12 @@ wait(uint64 addr)
   }
 }
 
-// Define a seed for the random number generator
-static uint64 rand_seed = 1;
-static struct spinlock rand_lock;
+static unsigned long int next = 1;
 
-// Function to set the seed
-void ticket_srand(uint64 seed) {
-  acquire(&rand_lock);
-  rand_seed = seed;
-  release(&rand_lock);
-}
-
-// Function to generate a random number
-uint64 ticket_rand(int range) {
-  acquire(&rand_lock);
-  rand_seed = rand_seed * 1664525 + 1013904223;
-  uint64 result = (rand_seed >> 24) % range;
-  release(&rand_lock);
-  return result;
+int rand(void) // RAND_MAX assumed to be 32767
+{
+    next = next * 1103515245 + 12345;
+    return (unsigned int)(next/65536) % 32768;
 }
 
 void
@@ -483,7 +471,7 @@ scheduler(void)
       release(&p->lock);
     }
 
-    int golden_ticket = ticket_rand(total_tickets);
+    int golden_ticket = rand()%total_tickets;
     int ticket_buffer = 0;
 
     for(p = proc; p < &proc[NPROC]; p++) {
